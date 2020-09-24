@@ -54,7 +54,7 @@ impl InternalError {
             sys::SG_ERR_UNKNOWN => Some(InternalError::Unknown),
             sys::SG_ERR_DUPLICATE_MESSAGE => {
                 Some(InternalError::DuplicateMessage)
-            },
+            }
             sys::SG_ERR_INVALID_KEY => Some(InternalError::InvalidKey),
             sys::SG_ERR_INVALID_KEY_ID => Some(InternalError::InvalidKeyId),
             sys::SG_ERR_INVALID_MAC => Some(InternalError::InvalidMAC),
@@ -64,22 +64,22 @@ impl InternalError {
             sys::SG_ERR_NO_SESSION => Some(InternalError::NoSession),
             sys::SG_ERR_STALE_KEY_EXCHANGE => {
                 Some(InternalError::StaleKeyExchange)
-            },
+            }
             sys::SG_ERR_UNTRUSTED_IDENTITY => {
                 Some(InternalError::UntrustedIdentity)
-            },
+            }
             sys::SG_ERR_VRF_SIG_VERIF_FAILED => {
                 Some(InternalError::VerifySignatureVerificationFailed)
-            },
+            }
             sys::SG_ERR_INVALID_PROTO_BUF => {
                 Some(InternalError::InvalidProtoBuf)
-            },
+            }
             sys::SG_ERR_FP_VERSION_MISMATCH => {
                 Some(InternalError::FPVersionMismatch)
-            },
+            }
             sys::SG_ERR_FP_IDENT_MISMATCH => {
                 Some(InternalError::FPIdentMismatch)
-            },
+            }
             _ => None,
         }
     }
@@ -102,14 +102,14 @@ impl InternalError {
             InternalError::UntrustedIdentity => sys::SG_ERR_UNTRUSTED_IDENTITY,
             InternalError::VerifySignatureVerificationFailed => {
                 sys::SG_ERR_VRF_SIG_VERIF_FAILED
-            },
+            }
             InternalError::InvalidProtoBuf => sys::SG_ERR_INVALID_PROTO_BUF,
             InternalError::FPVersionMismatch => sys::SG_ERR_FP_VERSION_MISMATCH,
             InternalError::FPIdentMismatch => sys::SG_ERR_FP_IDENT_MISMATCH,
             InternalError::Other(c) => c,
             InternalError::UnknownCiphertextType(_) => {
                 sys::SG_ERR_INVALID_PROTO_BUF
-            },
+            }
             InternalError::SerializationError => sys::SG_ERR_INVALID_PROTO_BUF,
         }
     }
@@ -156,5 +156,7 @@ impl<T> IntoInternalErrorCode for Result<T, InternalError> {
 }
 
 impl From<InternalError> for i32 {
-    fn from(other: InternalError) -> i32 { other.code() }
+    fn from(other: InternalError) -> i32 {
+        other.code()
+    }
 }

@@ -13,7 +13,9 @@ pub struct PreKeyBundle {
 
 impl PreKeyBundle {
     /// Get a builder struct for the [`PreKeyBundle`].
-    pub fn builder() -> PreKeyBundleBuilder { PreKeyBundleBuilder::default() }
+    pub fn builder() -> PreKeyBundleBuilder {
+        PreKeyBundleBuilder::default()
+    }
 
     /// Get the registration ID.
     pub fn registration_id(&self) -> u32 {

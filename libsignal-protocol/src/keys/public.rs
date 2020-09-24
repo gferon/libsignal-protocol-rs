@@ -93,7 +93,6 @@ impl PublicKey {
         }
     }
 
-
     /// returns this public key as a base64 encoded string
     pub fn as_base64(&self) -> Result<String, InternalError> {
         unsafe {

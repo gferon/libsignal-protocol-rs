@@ -51,7 +51,7 @@ impl TryFrom<i32> for SignalCipherType {
         match v as u32 {
             sys::SG_CIPHER_AES_CTR_NOPADDING => {
                 Ok(SignalCipherType::AesCtrNoPadding)
-            },
+            }
             sys::SG_CIPHER_AES_CBC_PKCS5 => Ok(SignalCipherType::AesCbcPkcs5),
             _ => Err(SignalCipherTypeError(v)),
         }
@@ -145,7 +145,9 @@ impl CryptoProvider {
         CryptoProvider { vtable, state }
     }
 
-    pub fn state(&self) -> &dyn Crypto { &*self.state.0 }
+    pub fn state(&self) -> &dyn Crypto {
+        &*self.state.0
+    }
 }
 
 struct State(Box<dyn Crypto>);
@@ -174,7 +176,7 @@ unsafe extern "C" fn random_func(
         Ok(Err(e)) => {
             log::error!("Unable to generate random data: {}", e);
             InternalError::Unknown.code()
-        },
+        }
         Err(e) => {
             let msg = if let Some(m) = e.downcast_ref::<&str>() {
                 m
@@ -187,7 +189,7 @@ unsafe extern "C" fn random_func(
             len, file!(), line!(), msg);
 
             InternalError::Unknown.code()
-        },
+        }
     }
 }
 
@@ -220,7 +222,7 @@ unsafe extern "C" fn hmac_sha256_final_func(
             let buffer = Buffer::from(hmac);
             *output = buffer.into_raw();
             sys::SG_SUCCESS as c_int
-        },
+        }
         Err(e) => e.code(),
     }
 }
@@ -242,7 +244,7 @@ unsafe extern "C" fn hmac_sha256_init_func(
         Err(e) => {
             *hmac_context = ptr::null_mut();
             return e.code();
-        },
+        }
     };
 
     *hmac_context =
@@ -279,7 +281,7 @@ unsafe extern "C" fn sha512_digest_init_func(
         Err(e) => {
             *digest_context = ptr::null_mut();
             return e.code();
-        },
+        }
     };
 
     let dc = Box::new(DigestContext(Mutex::new(hasher)));
@@ -319,7 +321,7 @@ unsafe extern "C" fn sha512_digest_final_func(
             let buffer = Buffer::from(buf);
             *output = buffer.into_raw();
             sys::SG_SUCCESS as c_int
-        },
+        }
         Err(e) => e.code(),
     }
 }
@@ -440,7 +442,7 @@ unsafe extern "C" fn internal_cipher(
             let buffer = Buffer::from(buf);
             *output = buffer.into_raw();
             sys::SG_SUCCESS as c_int
-        },
+        }
         Err(e) => e.code(),
     }
 }

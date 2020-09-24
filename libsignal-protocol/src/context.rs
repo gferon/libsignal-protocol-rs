@@ -1,6 +1,7 @@
 use std::{
     convert::TryFrom,
     fmt::{self, Debug, Formatter},
+    marker::{Send, Sync},
     os::raw::{c_char, c_int, c_void},
     panic::RefUnwindSafe,
     pin::Pin,
@@ -8,7 +9,6 @@ use std::{
     rc::Rc,
     sync::Mutex,
     time::SystemTime,
-    marker::{Send, Sync},
 };
 
 use failure::Error;
@@ -282,9 +282,13 @@ impl Context {
     }
 
     /// Access the original [`Crypto`] object.
-    pub fn crypto(&self) -> &dyn Crypto { self.0.crypto.state() }
+    pub fn crypto(&self) -> &dyn Crypto {
+        self.0.crypto.state()
+    }
 
-    pub(crate) fn raw(&self) -> *mut sys::signal_context { self.0.raw() }
+    pub(crate) fn raw(&self) -> *mut sys::signal_context {
+        self.0.raw()
+    }
 
     /// Se the function to use when `libsignal-protocol-c` emits a log message.
     pub fn set_log_func<F>(&self, log_func: F)
@@ -303,7 +307,7 @@ impl Default for Context {
             Ok(c) => c,
             Err(e) => {
                 panic!("Unable to create a context using the defaults: {}", e)
-            },
+            }
         }
     }
 }
@@ -364,7 +368,9 @@ impl ContextInner {
         }
     }
 
-    pub(crate) const fn raw(&self) -> *mut sys::signal_context { self.raw }
+    pub(crate) const fn raw(&self) -> *mut sys::signal_context {
+        self.raw
+    }
 }
 
 impl Drop for ContextInner {
@@ -424,7 +430,7 @@ fn translate_log_level(raw: c_int) -> Level {
 }
 
 // Assert that Context does not implement [`Send`] and [`Sync`] to guarantee
-// that each [`Context`] instance is only used within a single thread. 
+// that each [`Context`] instance is only used within a single thread.
 //
 // See https://github.com/Michael-F-Bryan/libsignal-protocol-rs/issues/49
 // for details.
@@ -435,8 +441,7 @@ unsafe extern "C" fn lock_function(_user_data: *mut c_void) {
     // threads as long as it does not implement [`Sync`] and [`Send`].
 }
 
-unsafe extern "C" fn unlock_function(_user_data: *mut c_void) {
-}
+unsafe extern "C" fn unlock_function(_user_data: *mut c_void) {}
 
 /// The "user state" we pass to `libsignal-protocol-c` as part of the global
 /// context.
