@@ -1,32 +1,58 @@
 use crate::{
     context::ContextInner,
     errors::FromInternalErrorCode,
-    keys::{PreKey, SessionSignedPreKey},
+    keys::{IdentityKeyPair, PreKey, SessionSignedPreKey},
     raw_ptr::Raw,
+    stores::IdentityKeyStore,
     Address, Error, InternalError, SessionRecord,
 };
 use std::{
     fmt::{self, Debug, Formatter},
     ptr,
     rc::Rc,
+    sync::{Arc, RwLock},
 };
 
 /// Something which contains state used by the signal protocol.
 ///
 /// Under the hood this contains several "Stores" for various keys and session
 /// state (e.g. which identities are trusted, and their pre-keys).
-#[derive(Debug, Clone)]
-pub struct StoreContext(pub(crate) Rc<StoreContextInner>);
+#[allow(missing_debug_implementations)]
+#[derive(Clone)]
+pub struct StoreContext(
+    pub(crate) Rc<StoreContextInner>,
+    /// doing this temporarily until libsignal-protocol-c gets a signal_protocol_identity_get_identity(addr) function
+    Arc<RwLock<dyn IdentityKeyStore>>,
+);
 
 impl StoreContext {
     pub(crate) fn new(
         raw: *mut sys::signal_protocol_store_context,
         ctx: &Rc<ContextInner>,
+        identity_key_store: Arc<RwLock<dyn IdentityKeyStore>>,
     ) -> StoreContext {
-        StoreContext(Rc::new(StoreContextInner {
-            raw,
-            ctx: Rc::clone(ctx),
-        }))
+        StoreContext(
+            Rc::new(StoreContextInner {
+                raw,
+                ctx: Rc::clone(ctx),
+            }),
+            identity_key_store,
+        )
+    }
+
+    /// Return the identity key pair of this store.
+    pub fn identity_key_pair(&self) -> Result<IdentityKeyPair, Error> {
+        unsafe {
+            let mut key_pair = std::ptr::null_mut();
+            sys::signal_protocol_identity_get_key_pair(
+                self.raw(),
+                &mut key_pair,
+            )
+            .into_result()?;
+            Ok(IdentityKeyPair {
+                raw: Raw::from_ptr(key_pair),
+            })
+        }
     }
 
     /// Store pre key
