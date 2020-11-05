@@ -1,16 +1,8 @@
-use crate::{
-    context::ContextInner,
-    errors::FromInternalErrorCode,
-    keys::{IdentityKeyPair, PreKey, SessionSignedPreKey},
-    raw_ptr::Raw,
-    stores::IdentityKeyStore,
-    Address, Error, InternalError, SessionRecord,
-};
+use crate::{Address, Buffer, Error, InternalError, SessionRecord, context::ContextInner, errors::FromInternalErrorCode, keys::{IdentityKeyPair, PreKey, SessionSignedPreKey}, raw_ptr::Raw};
 use std::{
     fmt::{self, Debug, Formatter},
     ptr,
     rc::Rc,
-    sync::{Arc, RwLock},
 };
 
 /// Something which contains state used by the signal protocol.
@@ -19,25 +11,17 @@ use std::{
 /// state (e.g. which identities are trusted, and their pre-keys).
 #[allow(missing_debug_implementations)]
 #[derive(Clone)]
-pub struct StoreContext(
-    pub(crate) Rc<StoreContextInner>,
-    /// doing this temporarily until libsignal-protocol-c gets a signal_protocol_identity_get_identity(addr) function
-    Arc<RwLock<dyn IdentityKeyStore>>,
-);
+pub struct StoreContext(pub(crate) Rc<StoreContextInner>);
 
 impl StoreContext {
     pub(crate) fn new(
         raw: *mut sys::signal_protocol_store_context,
         ctx: &Rc<ContextInner>,
-        identity_key_store: Arc<RwLock<dyn IdentityKeyStore>>,
     ) -> StoreContext {
-        StoreContext(
-            Rc::new(StoreContextInner {
-                raw,
-                ctx: Rc::clone(ctx),
-            }),
-            identity_key_store,
-        )
+        StoreContext(Rc::new(StoreContextInner {
+            raw,
+            ctx: Rc::clone(ctx),
+        }))
     }
 
     /// Return the identity key pair of this store.
@@ -110,6 +94,20 @@ impl StoreContext {
                 code => Err(InternalError::from_error_code(code)
                     .unwrap_or(InternalError::Unknown)
                     .into()),
+            }
+        }
+    }
+
+    /// Return the saved public identity key for a remote client.
+    pub fn get_identity(&self, addr: &Address) -> Result<Option<Buffer>, Error> {
+        unsafe {
+            let mut raw = std::ptr::null_mut();
+            sys::signal_protocol_identity_get_identity(self.raw(), addr.raw(), &mut raw).into_result()?;
+            dbg!(raw);
+            if raw.is_null() {
+                Ok(None)
+            } else {
+                Ok(Some(Buffer::from_raw(raw)))
             }
         }
     }

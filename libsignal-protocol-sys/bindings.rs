@@ -2411,6 +2411,17 @@ pub struct signal_protocol_identity_key_store {
             user_data: *mut ::std::os::raw::c_void,
         ) -> ::std::os::raw::c_int,
     >,
+    /// Return the saved public identity key for a remote client.
+    ///
+    /// @param address the address of the remote client
+    /// @return 0 on success, negative on failure
+    pub get_identity: ::std::option::Option<
+        unsafe extern "C" fn(
+            address: *const signal_protocol_address,
+            identity_data: *mut *mut signal_buffer,
+            user_data: *mut ::std::os::raw::c_void,
+        ) -> ::std::os::raw::c_int,
+    >,
     /// Function called to perform cleanup when the data store context is being
     /// destroyed.
     pub destroy_func: ::std::option::Option<
@@ -2851,6 +2862,13 @@ extern "C" {
         context: *mut signal_protocol_store_context,
         address: *const signal_protocol_address,
         identity_key: *mut ec_public_key,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn signal_protocol_identity_get_identity(
+        context: *mut signal_protocol_store_context,
+        address: *const signal_protocol_address,
+        identity_buffer: *mut *mut signal_buffer,
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {

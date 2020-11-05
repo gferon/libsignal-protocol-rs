@@ -2,8 +2,6 @@ use crate::{Address, Buffer, Error};
 use std::{
     os::raw::{c_int, c_void},
     panic::RefUnwindSafe,
-    sync::Arc,
-    sync::RwLock,
 };
 
 /// Something used to store identity keys and track trusted identities.
@@ -33,7 +31,7 @@ pub trait IdentityKeyStore: RefUnwindSafe {
     ) -> Result<bool, Error>;
 
     /// Get a trusted remote client's identity.
-    fn get_identity(&self, address: &Address) -> Result<Option<Buffer>, Error>;
+    fn get_identity(&self, address: Address) -> Result<Option<Buffer>, Error>;
 
     /// Save a remote client's identity key as trusted.
     ///
@@ -48,9 +46,9 @@ pub trait IdentityKeyStore: RefUnwindSafe {
 }
 
 pub(crate) fn new_vtable<I: IdentityKeyStore + 'static>(
-    identity_key_store: Arc<RwLock<I>>,
+    identity_key_store: I,
 ) -> sys::signal_protocol_identity_key_store {
-    let state: Box<State> = Box::new(State(identity_key_store));
+    let state: Box<State> = Box::new(State(Box::new(identity_key_store)));
 
     sys::signal_protocol_identity_key_store {
         user_data: Box::into_raw(state) as *mut c_void,
@@ -58,11 +56,12 @@ pub(crate) fn new_vtable<I: IdentityKeyStore + 'static>(
         get_local_registration_id: Some(get_local_registration_id),
         save_identity: Some(save_identity),
         is_trusted_identity: Some(is_trusted_identity),
+        get_identity: Some(get_identity),
         destroy_func: Some(destroy_func),
     }
 }
 
-struct State(Arc<RwLock<dyn IdentityKeyStore>>);
+struct State(Box<dyn IdentityKeyStore>);
 
 unsafe extern "C" fn get_identity_key_pair(
     public_data: *mut *mut sys::signal_buffer,
@@ -75,12 +74,7 @@ unsafe extern "C" fn get_identity_key_pair(
 
     let user_data = &*(user_data as *const State);
 
-    match signal_catch_unwind!(user_data
-        .0
-        .read()
-        .expect("poisoned mutex")
-        .identity_key_pair())
-    {
+    match signal_catch_unwind!(user_data.0.identity_key_pair()) {
         Ok((public, private)) => {
             *public_data = public.into_raw();
             *private_data = private.into_raw();
@@ -98,12 +92,7 @@ unsafe extern "C" fn get_local_registration_id(
 
     let user_data = &*(user_data as *const State);
 
-    match signal_catch_unwind!(user_data
-        .0
-        .read()
-        .expect("poisoned mutex")
-        .local_registration_id())
-    {
+    match signal_catch_unwind!(user_data.0.local_registration_id()) {
         Ok(id) => {
             *registration_id = id;
             sys::SG_SUCCESS as c_int
@@ -129,12 +118,7 @@ unsafe extern "C" fn save_identity(
         std::slice::from_raw_parts(key_data, key_len)
     };
 
-    match signal_catch_unwind!(user_data
-        .0
-        .write()
-        .expect("poisoned mutex")
-        .save_identity(address, key))
-    {
+    match signal_catch_unwind!(user_data.0.save_identity(address, key)) {
         Ok(_) => sys::SG_SUCCESS as _,
         Err(e) => e.code(),
     }
@@ -158,14 +142,34 @@ unsafe extern "C" fn is_trusted_identity(
     });
     let key = std::slice::from_raw_parts(key_data, key_len);
 
-    match signal_catch_unwind!(user_data
-        .0
-        .read()
-        .expect("poisoned mutex")
-        .is_trusted_identity(address, key))
-    {
+    match signal_catch_unwind!(user_data.0.is_trusted_identity(address, key)) {
         Ok(true) => 1,
         Ok(false) => 0,
+        Err(e) => e.code(),
+    }
+}
+
+unsafe extern "C" fn get_identity(
+    address: *const sys::signal_protocol_address,
+    identity_data: *mut *mut sys::signal_buffer,
+    user_data: *mut c_void,
+) -> c_int {
+    signal_assert!(!address.is_null());
+    signal_assert!(!user_data.is_null());
+
+    let user_data = &*(user_data as *const State);
+    let address = Address::from_raw(sys::signal_protocol_address {
+        name: (*address).name,
+        name_len: (*address).name_len,
+        device_id: (*address).device_id,
+    });
+
+    match signal_catch_unwind!(user_data.0.get_identity(address)) {
+        Ok(Some(identity)) => {
+            *identity_data = identity.into_raw();
+            sys::SG_SUCCESS as c_int
+        }
+        Ok(None) => 0,
         Err(e) => e.code(),
     }
 }

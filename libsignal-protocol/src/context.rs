@@ -7,8 +7,7 @@ use std::{
     pin::Pin,
     ptr,
     rc::Rc,
-    sync::Arc,
-    sync::{Mutex, RwLock},
+    sync::Mutex,
     time::SystemTime,
 };
 
@@ -234,14 +233,13 @@ where
         )
         .into_result()?;
 
-        let identity_key_store = Arc::new(RwLock::new(identity_key_store));
         sys::signal_protocol_store_context_set_identity_key_store(
             store_ctx,
-            &iks::new_vtable(identity_key_store.clone()),
+            &iks::new_vtable(identity_key_store),
         )
         .into_result()?;
 
-        Ok(StoreContext::new(store_ctx, &ctx.0, identity_key_store))
+        Ok(StoreContext::new(store_ctx, &ctx.0))
     }
 }
 

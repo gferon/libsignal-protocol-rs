@@ -68,12 +68,12 @@ impl IdentityKeyStore for InMemoryIdentityKeyStore {
         Ok(())
     }
 
-    fn get_identity(&self, addr: &Address) -> Result<Option<Buffer>, Error> {
+    fn get_identity(&self, addr: Address) -> Result<Option<Buffer>, Error> {
         Ok(self
             .trusted_identities
             .lock()
             .unwrap()
-            .get(addr)
+            .get(&addr)
             .and_then(|i| Some(Buffer::from(i.clone()))))
     }
 }
